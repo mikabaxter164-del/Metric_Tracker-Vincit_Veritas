@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Vincit Veritas | Sales KPI Dashboard</title>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--tx:#1d1d1b;--mut:#6b6b66;--ln:#e4e2db;--ac:#1b3a6b;--gold:#c9a227;--okbg:#d9f0e3;--badbg:#f8d9d4;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#151816;--card:#1f2421;--tx:#ecece8;--mut:#9a9b95;--ln:#2e3531;--ac:#5b8fe0;--okbg:#1f4a37;--badbg:#5a2d28}}
+:root[data-theme="dark"]{--bg:#151816;--card:#1f2421;--tx:#ecece8;--mut:#9a9b95;--ln:#2e3531;--ac:#5b8fe0;--okbg:#1f4a37;--badbg:#5a2d28}
+*{box-sizing:border-box}html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:980px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 14px}h2{font-size:15px;margin:0 0 10px}
+.card{background:var(--card);border:1px solid var(--ln);border-radius:12px;padding:14px;margin-bottom:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:end}
+label{font-size:12px;color:var(--mut);display:flex;flex-direction:column;gap:3px}
+input,select,textarea{font:inherit;padding:7px;border:1px solid var(--ln);border-radius:8px;background:var(--bg);color:var(--tx)}
+input.n{width:62px;text-align:center}input.nm{width:110px}
+button{font:inherit;padding:8px 13px;border:0;border-radius:8px;background:var(--ac);color:#fff;cursor:pointer}
+button.g{background:transparent;color:var(--tx);border:1px solid var(--ln)}button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.sc{overflow-x:auto}table{border-collapse:collapse;width:100%}
+th,td{padding:6px 5px;border-bottom:1px solid var(--ln);text-align:center;white-space:nowrap}
+th{font-size:12px;color:var(--mut);font-weight:500}th:first-child,td:first-child{text-align:left}
+td.ok{background:var(--okbg)}td.bad{background:var(--badbg)}tr.tot td{font-weight:600}
+.mut{color:var(--mut);font-size:13px}
+textarea.sm{width:100%;height:400px;font:14px/1.5 ui-monospace,Menlo,Consolas,monospace;margin-top:10px}
+.hero{background:linear-gradient(135deg,#14213d 0%,#1b3a6b 60%,#2b5aa0 100%);color:#fff;border-radius:14px;padding:18px;margin-bottom:14px;border-bottom:4px solid var(--gold);display:flex;align-items:center;gap:14px}
+.hero h1{margin:0;font:700 26px Georgia,"Times New Roman",serif;letter-spacing:.14em;text-transform:uppercase;color:#fff}
+.hero p{margin:3px 0 0;color:#e8d9a0;font-size:12px;letter-spacing:.1em}.shield{font-size:40px}
+.card h2{border-left:4px solid var(--gold);padding-left:8px}
+thead th{color:var(--ac);font-weight:600}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:12px}
+.stc{color:#fff;border-radius:10px;padding:10px 12px}.stc small{opacity:.9;display:block;font-size:12px}.stc b{font-size:22px}
+</style></head><body><main>
+<div class="hero"><div class="shield">🛡️</div><div><h1>Vincit Veritas</h1><p>SALES TEAM KPI DASHBOARD · TRUTH CONQUERS</p></div></div>
+
+<div class="card"><div class="row">
+<label>Week ending<input type="date" id="wk"></label>
+<label>Saved weeks<select id="past"></select></label>
+<button class="g" onclick="addRep()">+ Add rep</button></div></div>
+
+<div class="card"><h2>1. Enter the week's numbers</h2>
+<div class="sc"><table id="ein"></table></div>
+<p class="mut">Each stage (Intros → Voids) is the number of shutdowns at that point. Days worked scales the targets.</p></div>
+
+<div class="card"><h2>2. Team overview <span class="mut">(green = on target, red = off target. Low closes show green when sales are on target)</span></h2>
+<div class="cards" id="cards"></div>
+<div class="sc"><table id="team"></table></div></div>
+
+<div class="card"><h2>3. Rep summary to send</h2>
+<div class="row" id="reps"></div>
+<textarea class="sm" id="sm"></textarea>
+<div class="row" style="margin-top:8px"><button onclick="cp()">Copy message</button><span class="mut" id="cpm"></span></div>
+<p class="mut">You can edit the message above before copying. It resets if you change the numbers.</p></div>
+
+<details class="card"><summary>Daily targets (editable)</summary>
+<p class="mut">Per day. Leave a box blank for no limit. Below Min = short, above Max = over.</p>
+<table id="tg" style="max-width:340px"></table></details>
+
+<details class="card"><summary>Backup / restore</summary>
+<p class="mut">Data is stored in this browser only. Export and keep a copy somewhere safe.</p>
+<textarea id="bk" rows="3" style="width:100%"></textarea>
+<div class="row" style="margin-top:8px"><button class="g" onclick="$('bk').value=JSON.stringify(S)">Export</button><button class="g" onclick="imp()">Import</button></div></details>
+</main>
+<script>
+const K=[
+{k:'contacts',n:'Contacts',mn:60,mx:null,lo:'Volume is below target. Increase pitch volume and cut downtime between contacts.'},
+{k:'intros',n:'Intros',mn:5,mx:7,lo:'Below range. Check overall contact volume.',hi:'Too many prospects are shutting down at the intro. Review the opener, tone and first impression.'},
+{k:'engages',n:'Engages',mn:null,mx:2,lo:'Below range. Check volume and that prospects are being moved into the pitch.',hi:'Losing too many at the engage stage. Work on rapport and asking better questions.'},
+{k:'presentations',n:'Presentations',mn:null,mx:2,lo:'Below range. Check volume and that prospects are being moved into the presentation.',hi:'Prospects are dropping out during the presentation. Review delivery and relevance to the prospect.'},
+{k:'closes',n:'Closes',mn:17,mx:null,lo:'Fewer prospects are reaching the close. Work on moving them through the pitch.'},
+{k:'yeses',n:"Yes's",mn:0,mx:0,hi:"Yes's should be 0. Review how objections are handled at the final stage."},
+{k:'voids',n:'Voids',mn:0,mx:2,hi:'Too many voids. Review how sales are locked in and how expectations are set.'},
+{k:'sales',n:'Sales',mn:2,mx:null,lo:'Sales are below target. Role-play closing and objection handling.'},
+{k:'shutdowns',n:'Shutdowns',mn:null,mx:null},
+{k:'nq',n:'Non-Qualified',mn:null,mx:null}];
+const KEY='sales_kpi_dash_v2';
+let S={reps:['Rep 1','Rep 2','Rep 3','Rep 4','Rep 5'],t:{},w:{}},W,sel=0;
+try{let r=localStorage.getItem(KEY);if(r)S=Object.assign(S,JSON.parse(r));else{r=localStorage.getItem('sales_kpi_dash_v1');if(r){const o=JSON.parse(r);delete o.t;S=Object.assign(S,o)}}}catch(e){}
+K.forEach(x=>{if(!S.t[x.k])S.t[x.k]=[x.mn,x.mx]});
+const $=id=>document.getElementById(id),save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const has=d=>!!d&&K.some(x=>d[x.k]!==undefined);
+const fd=w=>new Date(w+'T00:00').toLocaleDateString('en-AU',{day:'numeric',month:'short',year:'numeric'});
+function st(k,d,days){const v=+d[k]||0,e=ev(k,v,days);if(k==='closes'&&e.s==='lo'){const sm=S.t.sales[0];if(sm!=null&&(+d.sales||0)>=sm*days)return{s:'ok',eff:1}}return e}
+function ev(k,v,d){const[mn,mx]=S.t[k],lo=mn==null?null:mn*d,hi=mx==null?null:mx*d;
+if(lo==null&&hi==null)return{s:'na'};
+if(lo!=null&&v<lo)return{s:'lo',gap:v-lo,bound:lo};
+if(hi!=null&&v>hi)return{s:'hi',gap:v-hi,bound:hi};return{s:'ok'}}
+function tgt(k,d){const[mn,mx]=S.t[k];if(mx===0)return'0';if(mn&&mx!=null)return`${mn*d}–${mx*d}`;if(mn)return`${mn*d}+`;return mx!=null?`up to ${mx*d}`:'–'}
+function setV(i,k,val){S.w[W]=S.w[W]||{};const d=S.w[W][i]=S.w[W][i]||{};if(val==='')delete d[k];else d[k]=+val;save();drawOut()}
+function setT(k,j,val){S.t[k][j]=val===''?null:+val;save();drawOut()}
+function addRep(){S.reps.push('Rep '+(S.reps.length+1));save();drawIn();drawOut()}
+function imp(){try{S=Object.assign(S,JSON.parse($('bk').value));save();init()}catch(e){alert('Could not read that backup.')}}
+function drawIn(){
+$('ein').innerHTML='<thead><tr><th>Rep</th><th>Days</th>'+K.map(x=>`<th>${x.n}</th>`).join('')+'</tr></thead><tbody>'+
+S.reps.map((r,i)=>{const d=(S.w[W]||{})[i]||{};
+return`<tr><td><input class="nm" value="${esc(r)}" oninput="S.reps[${i}]=this.value;save();drawOut()"></td><td><input class="n" type="number" value="${d.days??5}" oninput="setV(${i},'days',this.value)"></td>`+
+K.map(x=>`<td><input class="n" type="number" inputmode="numeric" value="${d[x.k]??''}" oninput="setV(${i},'${x.k}',this.value)"></td>`).join('')+'</tr>'}).join('')+'</tbody>'}
+function drawOut(){
+let h='<thead><tr><th>Rep</th><th>Days</th>'+K.map(x=>`<th>${x.n}</th>`).join('')+'<th>On target</th></tr></thead><tbody>';
+const tot={};
+S.reps.forEach((r,i)=>{const d=(S.w[W]||{})[i];if(!has(d)){h+=`<tr><td>${esc(r)}</td><td colspan="${K.length+2}" class="mut">No data</td></tr>`;return}
+const days=+d.days||5;let ok=0,n=0;
+h+=`<tr><td>${esc(r)}</td><td>${days}</td>`+K.map(x=>{const v=+d[x.k]||0;tot[x.k]=(tot[x.k]||0)+v;const e=st(x.k,d,days);if(e.s!=='na'){n++;if(e.s==='ok')ok++}
+return`<td class="${e.s==='ok'?'ok':e.s==='na'?'':'bad'}">${v}</td>`}).join('')+`<td>${ok}/${n}</td></tr>`});
+h+='<tr class="tot"><td>Team total</td><td></td>'+K.map(x=>`<td>${tot[x.k]??'–'}</td>`).join('')+'<td></td></tr></tbody>';
+$('team').innerHTML=h;
+const cr=tot.sales?(tot.closes||0)/tot.sales:null;
+$('cards').innerHTML=[['Contacts',tot.contacts??0,'#1b3a6b'],['Closes',tot.closes??0,'#0f766e'],['Sales',tot.sales??0,'#a8841a'],['Close-to-sale',cr?cr.toFixed(1)+' : 1':'–','#6d28d9'],['Shutdowns',tot.shutdowns??0,'#475569']].map(([a,b,c])=>`<div class="stc" style="background:linear-gradient(135deg,${c},${c}cc)"><small>${a}</small><b>${b}</b></div>`).join('');
+$('reps').innerHTML=S.reps.map((r,i)=>`<button class="g ${i===sel?'on':''}" onclick="sel=${i};drawOut()">${esc(r)}</button>`).join('');
+$('sm').value=summary(sel);
+$('tg').innerHTML='<tr><th>KPI</th><th>Min/day</th><th>Max/day</th></tr>'+K.map(x=>`<tr><td>${x.n}</td><td><input class="n" type="number" value="${S.t[x.k][0]??''}" oninput="setT('${x.k}',0,this.value)"></td><td><input class="n" type="number" value="${S.t[x.k][1]??''}" oninput="setT('${x.k}',1,this.value)"></td></tr>`).join('')}
+const POS={
+contacts:'Contact volume is the engine of your results. The more people you speak to, the more chances you create, and you are doing that consistently.',
+intros:'Your intro shutdowns sat in the ideal range, so your opener is holding up for most of the people you speak to.',
+engages:'Low engage shutdowns mean prospects are staying with you through the conversation instead of dropping off early. Your rapport and questions are landing.',
+presentations:'Few shutdowns during the presentation mean your pitch is holding attention and prospects are staying with you.',
+closes:'High closes means you are getting the full pitch out and taking people all the way to the close, which is exactly where sales are made.',
+yeses:'Zero yes shutdowns means that when someone is ready to say yes, you are locking it in without losing them.',
+voids:'Voids are low, so the sales you make are sticking. That points to clear expectations at the point of sale.',
+sales:'You hit your sales target. Turning conversations into signed sales is the number that matters most.'};
+const EFF='Your closes are below the usual number, but your sales are on target. That means very few of your closes are going to waste, which is the ideal close-to-sale ratio. The closer to 1:1 the better.';
+const FIX={
+contacts_lo:['Contact volume is the top of your funnel. Every extra conversation is another chance at a sale, and consistent volume protects your week when a few pitches go badly.','Set an hourly contact target, start on time, keep the time between pitches short, and count as you go instead of guessing at the end of the day.'],
+intros_hi:['Too many prospects are shutting you down in the first few seconds. People decide very quickly whether to engage, so the opener has to earn the next 30 seconds.','Open with a confident smile and a short reason for approaching, then ask one easy question. Avoid scripted small talk like "how are you today", match their tone, and use their name once you have it.'],
+intros_lo:['Your intro shutdowns were below the ideal range, which usually points to lower volume rather than a problem with the opener.','Check your contact count and make sure you are speaking to enough people each day.'],
+engages_hi:['Prospects are dropping off once the conversation starts. That usually means the pitch began before you understood what matters to them.','Ask open questions about their situation, listen for what they care about, and repeat it back before moving on. People buy for their reasons, not yours.'],
+presentations_hi:['Prospects are leaving during the presentation, so the pitch is losing relevance or momentum.','Tie each point to something they told you earlier, keep it short and conversational, and use trial closes like "does that make sense so far?" to catch hesitation early.'],
+closes_lo:['Not enough prospects are reaching the close. Sales only happen at that stage, so every conversation that ends earlier is a lost chance.','Keep the pitch tight and moving, cut the filler, and get to the decision with confidence. Aim to get the full pitch out on every qualified contact.'],
+yeses_hi:['Prospects are saying yes but not following through. The sale is being lost in the gap between agreement and commitment.','Once they say yes, stop selling. Move straight to the next step, have everything ready, and keep the momentum with a confident, assumptive tone.'],
+voids_hi:['Too many sales are being voided, which usually means the prospect was unsure or expectations were not clear at the point of sale.','Recap the terms in plain language, avoid over-promising, and ask "is there anything you are unsure about?" before you finish.'],
+sales_lo:['Sales are below target. Converting the decision is the skill that moves this number most.','Ask for the sale directly. When you hear an objection, acknowledge it, ask a clarifying question, then isolate it: "if I could sort that out, would you sign today?" Practise your top three objections.'],
+shutdowns_hi:['Total shutdowns are above target.','Look at which stage most of your shutdowns happen in and work on that stage first.'],
+shutdowns_lo:['Total shutdowns are below target, which can point to lower contact volume.','Check your contact count against target.']};
+const ACT={
+contacts_lo:a=>`Hit ${a}+ contacts on every shift by setting an hourly target and counting as you go.`,
+intros_hi:(a,b)=>`Open every conversation with a short reason for approaching and one easy question. Goal: ${b} intro shutdowns or fewer per day.`,
+intros_lo:(a,b)=>`Raise your contact volume so your intros land in the ${a}-${b} range per day.`,
+engages_hi:(a,b)=>`Ask two open questions and repeat back what you hear before you start pitching. Goal: ${b} engage shutdowns or fewer per day.`,
+presentations_hi:(a,b)=>`Tie every point in your presentation to something the prospect told you, and check in with "does that make sense?" halfway through. Goal: ${b} or fewer presentation shutdowns per day.`,
+closes_lo:a=>`Get every qualified prospect through to the close by keeping the pitch tight. Goal: ${a}+ closes per day.`,
+yeses_hi:()=>`When the prospect says yes, stop selling and move straight to the next step. Goal: zero yes shutdowns.`,
+voids_hi:(a,b)=>`Recap the terms in plain language before every sale and ask what they are unsure about. Goal: ${b} or fewer voids per day.`,
+sales_lo:a=>`Ask for the sale directly and isolate every objection with "if I could sort that out, would you sign today?" Goal: ${a}+ sales per day.`};
+function summary(i){
+const d=(S.w[W]||{})[i];if(!has(d))return'No numbers entered for '+S.reps[i]+' this week.';
+const days=+d.days||5,v=k=>+d[k]||0,L=[],good=[],bad=[];
+const cl=v('closes'),sl=v('sales'),r=sl?cl/sl:null,tr=S.t.closes[0]&&S.t.sales[0]?S.t.closes[0]/S.t.sales[0]:null;
+K.forEach(x=>{const e=st(x.k,d,days),t=tgt(x.k,days),[mn,mx]=S.t[x.k];
+if(e.s==='na'){L.push(`• ${x.n}: ${v(x.k)}`);return}
+if(e.s==='ok'){L.push(`✅ ${x.n}: ${v(x.k)} (target ${t})${e.eff?' – low closes but strong sales, which is ideal':''}`);good.push(`• ${x.n} (${v(x.k)}, target ${t}): ${e.eff?EFF:(POS[x.k]||'On target.')}${mn&&mx==null&&v(x.k)>=mn*days*1.1?' You were well ahead of target.':''}`)}
+else{L.push(`⚠️ ${x.n}: ${v(x.k)} (target ${t}) – ${Math.abs(e.gap)} ${e.s==='lo'?'short':'over'}`);bad.push({x,e,sc:Math.abs(e.gap)/Math.max(e.bound,3)})}});
+bad.sort((a,b)=>b.sc-a.sc);const top=bad[0];
+const well=good.length?good.slice(0,4).join('\n'):'You showed up and put in the work, and every week is a chance to build on it. Let us focus on the one thing below.';
+let imp,act;
+if(!top){imp='Nothing was off target this week. To keep growing, raise your own bar: push contacts a little higher each day and keep tightening your closes-to-sales ratio.';act='Lift your daily contacts by about 10% next week while keeping your closes-to-sales ratio at or better than this week.'}
+else{const k=top.x.k,f=FIX[k+'_'+top.e.s]||[`${top.x.n} is ${top.e.s==='lo'?'below':'above'} target.`,'Review this stage of the pitch with your manager.'];
+imp=`${top.x.n}: ${v(k)} vs target ${tgt(k,days)} (${Math.abs(top.e.gap)} ${top.e.s==='lo'?'short':'over'}).\n${f[0]}\nHow to fix it: ${f[1]}`+(bad.length>1?`\nAlso keep an eye on: ${bad.slice(1,3).map(b=>b.x.n).join(', ')}.`:'');
+const a=ACT[k+'_'+top.e.s];act=a?a(S.t[k][0],S.t[k][1]):`Rehearse the ${top.x.n} stage of your pitch with your manager before your next shift.`}
+const ks=Object.keys(S.w).filter(x=>x<W).sort(),p=(S.w[ks[ks.length-1]]||{})[i];let vs;
+if(!has(p))vs='No previous week is logged for you yet, so this week becomes your baseline to beat.';
+else{const pd=+p.days||5,li=[];let up=0;
+['contacts','closes','sales','shutdowns'].forEach(k=>{const a=(+p[k]||0)/pd,b=v(k)/days,pc=a?Math.round((b-a)/a*100):null;
+if((k==='contacts'||k==='sales')&&b>a)up++;
+li.push(`• ${K.find(x=>x.k===k).n}: ${a.toFixed(1)} → ${b.toFixed(1)} per day${pc==null?'':` (${pc>=0?'▲':'▼'} ${Math.abs(pc)}%)`}`)});
+const pr=(+p.sales)?(+p.closes||0)/(+p.sales):null;
+let t3=2;if(pr&&r){t3=3;if(r<pr)up++}li.push(`• Closes per sale: ${pr?pr.toFixed(1):'–'} → ${r?r.toFixed(1):'–'}${pr&&r?(r<pr?' (improved, closer to 1:1)':r>pr?' (slipped)':''):''}`);
+vs=li.join('\n')+`\nYou improved on ${up} of ${t3} key numbers (contacts, sales, close-to-sale ratio).`}
+let rt;
+if(!cl)rt='No closes were recorded this week.';
+else if(!sl)rt=`${cl} closes and 0 sales. Prospects are reaching the close but not signing, so closing technique is the priority.`;
+else rt=`${r.toFixed(1)} closes per sale (${(sl/cl*100).toFixed(1)}% of closes turned into sales). The closer to 1:1 the better, and every close that turns into a sale is a close well spent.`+(r<=2?' You are converting at an elite level.':tr&&r<=tr?' You are converting closes efficiently, well inside the target pace of '+tr.toFixed(1)+' closes per sale.':tr?' Target pace is '+tr.toFixed(1)+' closes per sale or better, so work on objection handling and asking for the decision.':'');
+return `Hi ${S.reps[i]}, here is your summary for the week ending ${fd(W)} (${days} days worked).\n\nTHE NUMBERS\n${L.join('\n')}\n\n1. WHAT YOU DID WELL\n${well}\n\n2. WHAT NEEDS IMPROVING\n${imp}\n\n3. HOW YOU COMPARED TO LAST WEEK\n${vs}\n\n4. YOUR ONE TAKEAWAY FOR NEXT WEEK\n${act}\n\nCLOSE-TO-SALE RATIO\n${rt}\n\nVincit Veritas`}
+function cp(){const t=$('sm');t.select();(navigator.clipboard?navigator.clipboard.writeText(t.value):Promise.reject()).catch(()=>document.execCommand('copy'));$('cpm').textContent='Copied';setTimeout(()=>$('cpm').textContent='',1500)}
+function setW(w){W=w;$('wk').value=w;const ks=Object.keys(S.w).sort().reverse();$('past').innerHTML='<option value="">Jump to…</option>'+ks.map(k=>`<option value="${k}">${fd(k)}</option>`).join('');drawIn();drawOut()}
+$('wk').onchange=e=>e.target.value&&setW(e.target.value);
+$('past').onchange=e=>e.target.value&&setW(e.target.value);
+function init(){const ks=Object.keys(S.w).sort();setW(ks.length?ks[ks.length-1]:new Date().toISOString().slice(0,10))}
+init();
+</script></body></html>
